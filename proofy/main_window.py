@@ -1,11 +1,18 @@
 import logging
 
-from PySide2 import QtWidgets, QtGui
-from PySide2.QtCore import Slot, QObject, Signal, Qt
-from PySide2.QtWidgets import QMainWindow, QApplication, QAction, QFileDialog, QDockWidget
+from PySide2 import QtWidgets
+from PySide2.QtCore import Slot, Qt
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QApplication,
+    QAction,
+    QFileDialog,
+    QDockWidget,
+)
 
-from graph_widget import GraphWidget
-from log_console import LogConsole
+from widgets.graph import Graph
+from widgets.log_console import LogConsole
+from widgets.tools import Tools
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -16,19 +23,30 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.app = app
 
-        # LOGGING
+        # Widgets
+        # Logging
         self.log_console = LogConsole()
         self.log_console.add_slots(self.show_log_as_status)
         self.log_console.add_loggers(logger)
+        # Graph
+        self.graph_widget = Graph(self.log_console)
+        # Tools
+        self.tools = Tools(slot_draw_graph=self.graph_widget.draw_graph)
 
-        self.console_dock = QDockWidget("Console")
-        self.console_dock.setWidget(self.log_console)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.console_dock)
+        # Layout
+        self.setCentralWidget(self.graph_widget)
 
-        # Widget
-        self.widget = GraphWidget(self.log_console)
-        self.setCentralWidget(self.widget)
+        console_dock = QDockWidget("Console")
+        console_dock.setWidget(self.log_console)
+        self.addDockWidget(Qt.BottomDockWidgetArea, console_dock)
 
+        tools_dock = QDockWidget("Tools")
+        tools_dock.setWidget(self.tools)
+        self.addDockWidget(Qt.RightDockWidgetArea, tools_dock)
+
+        self.setWindowTitle("Proofy")
+
+        # Menu
         # Exit QAction
         exit_action = QAction(app.style().standardIcon(QtWidgets.QStyle.SP_DialogCloseButton), "Exit", self)
         exit_action.triggered.connect(self.exit)
@@ -38,10 +56,6 @@ class MainWindow(QMainWindow):
         # Save File
         save_action = QAction(app.style().standardIcon(QtWidgets.QStyle.SP_DialogSaveButton), "Save As...", self)
         save_action.triggered.connect(self.save_as)
-
-        self.setWindowTitle("Proofy")
-
-        # Menu
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("File")
         self.file_menu.addAction(open_action)
@@ -59,20 +73,20 @@ class MainWindow(QMainWindow):
     @Slot()
     def open(self):
         logger.debug(locals())
-        path = QFileDialog.getOpenFileName(self, caption="Open Graph", filter=self.widget.get_file_types())
+        path = QFileDialog.getOpenFileName(self, caption="Open Graph", filter=self.graph_widget.get_file_types())
         if path:
             try:
-                self.widget.open_file(*path)
+                self.graph_widget.open_file(*path)
             except Exception as e:
                 logger.error(e)
 
     @Slot()
     def save_as(self):
         logger.debug(locals())
-        path = QFileDialog.getSaveFileName(self, caption="Save Graph", filter=self.widget.get_file_types())
+        path = QFileDialog.getSaveFileName(self, caption="Save Graph", filter=self.graph_widget.get_file_types())
         if path:
             try:
-                self.widget.save_file(*path)
+                self.graph_widget.save_file(*path)
             except Exception as e:
                 logger.error(e)
 

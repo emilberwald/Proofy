@@ -3,38 +3,28 @@ import json
 import logging
 import pathlib
 
-import decorators
 import matplotlib.pyplot
 import networkx
 from PySide2.QtCore import Slot, QByteArray
 from PySide2.QtGui import QPixmap
-from PySide2.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QLabel,
-    QPushButton,
-)
+from PySide2.QtWidgets import QWidget, QLabel, QHBoxLayout
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class GraphWidget(QWidget):
+class Graph(QWidget):
     def __init__(self, log_console):
         logger.debug(locals())
         QWidget.__init__(self)
         log_console.add_loggers(logger)
 
         self.graph = None
+        self.displayarea = QLabel(parent=self)
 
-        self.layout = QVBoxLayout(self)
-
-        self.label = QLabel(self)
-        self.layout.addWidget(self.label)
-
-        self.update_button = QPushButton("Update")
-        self.update_button.clicked.connect(self.draw_graph)
-        self.layout.addWidget(self.update_button)
+        worklayout = QHBoxLayout(parent=self)
+        worklayout.addWidget(self.displayarea)
+        self.setLayout(worklayout)
 
     @Slot()
     def draw_graph(self):
@@ -49,9 +39,10 @@ class GraphWidget(QWidget):
 
             pixel_map = QPixmap()
             pixel_map.loadFromData(QByteArray(image.getvalue()))
-            self.resize(pixel_map.width(), pixel_map.height())
-            self.label.setPixmap(pixel_map)
+            self.displayarea.resize(pixel_map.width(), pixel_map.height())
+            self.displayarea.setPixmap(pixel_map)
             self.update()
+            logger.debug(f"{pixel_map.width()}x{pixel_map.height()}")
 
     @Slot()
     def get_file_types(self):

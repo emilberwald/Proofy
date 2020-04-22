@@ -1,6 +1,6 @@
 import sys
+
 from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import QThread
 
 from main_window import MainWindow
 

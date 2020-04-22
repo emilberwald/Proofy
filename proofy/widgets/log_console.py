@@ -3,7 +3,7 @@ import logging
 from PySide2 import QtGui, QtWidgets
 from PySide2.QtCore import Slot
 
-from log_handler import LogHandler
+from widgets.log_handler import LogHandler
 
 
 class LogConsole(QtWidgets.QTextEdit):

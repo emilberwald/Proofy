@@ -1,12 +1,12 @@
 import logging
 
-from PySide2.QtCore import QObject, Signal
+from widgets.log_signals import LogSignals
 
 
 class LogHandler(logging.Handler):
     def __init__(self, *args, **kwargs):
         super(LogHandler, self).__init__(*args, **kwargs)
-        self.signals = LogHandlerSignals()
+        self.signals = LogSignals()
 
     def add_slots(self, *slots):
         for slot in slots:
@@ -14,7 +14,3 @@ class LogHandler(logging.Handler):
 
     def emit(self, record):
         self.signals.log.emit(self.format(record), record)
-
-
-class LogHandlerSignals(QObject):
-    log = Signal(str, logging.LogRecord)
