@@ -1,0 +1,107 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <style>
+
+        .links line {
+            stroke: #fff;
+            stroke-opacity: 0.5;
+            stroke-width: 1px;
+        }
+
+        .nodes circle {
+            stroke: #fff;
+            stroke-width: 1px;
+        }
+
+    </style>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script>
+        var width = $width;
+        var height = $height;
+        var graph = JSON.parse($graph);
+
+        var svg = d3
+            .select("#graph")
+            .attr("width", width)
+            .attr("height", height)
+
+        var container = svg.append("g");
+
+        var simulation = d3
+            .forceSimulation(graph.nodes)
+            .force("charge", d3.forceManyBody())
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("link", d3.forceLink().id(function (d) { return d.id; }))
+            .on("tick", ticked);
+
+        var link = container
+            .append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(graph.links)
+            .enter()
+            .append("line")
+
+        var node = container.append("g").attr("class", "nodes")
+            .selectAll("g")
+            .data(graph.nodes)
+            .enter()
+            .append("g")
+
+        var circles = node
+            .append("circle")
+            .attr("r", 5)
+            .attr("fill", "#aaa")
+            .call(
+                d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended)
+            );
+
+        function ticked() {
+            node.call(updateNode);
+            link.call(updateLink);
+        }
+
+        function updateLink(link) {
+            link.attr("x1", function (d) { return d.source.x; })
+                .attr("y1", function (d) { return d.source.y; })
+                .attr("x2", function (d) { return d.target.x; })
+                .attr("y2", function (d) { return d.target.y; });
+        }
+
+        function updateNode(node) {
+            node.attr("transform", function (d) {
+                return "translate(" + d.x + "," + d.y + ")";
+            });
+        }
+
+        function dragstarted(d) {
+            if (!d3.event.active) graphLayout.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(d) {
+            d.fx = d3.event.x;
+            d.fy = d3.event.y;
+        }
+
+        function dragended(d) {
+            if (!d3.event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    </script>
+    <title>Proofy</title>
+</head>
+<body>
+    <div>Proofy</div>
+    <div>
+        <svg id="#graph"></svg>
+    </div>
+</body>
+</html>

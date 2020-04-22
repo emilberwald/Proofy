@@ -3,6 +3,7 @@ name = "proofy"
 version = "0.1.0"
 description = ""
 authors = ["emilberwald"]
+include = ["proofy/widgets/view/index.html"]
 
 [tool.poetry.dependencies]
 python = "~3.8"

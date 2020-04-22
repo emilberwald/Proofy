@@ -1,3 +1,4 @@
+import importlib.resources
 import io
 import json
 import logging
@@ -7,7 +8,8 @@ import matplotlib.pyplot
 import networkx
 from PySide2.QtCore import Slot, QByteArray
 from PySide2.QtGui import QPixmap
-from PySide2.QtWidgets import QWidget, QLabel, QHBoxLayout
+from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from PySide2.QtWidgets import QWidget, QHBoxLayout
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -20,34 +22,59 @@ class Graph(QWidget):
         log_console.add_loggers(logger)
 
         self.graph = None
-        self.displayarea = QLabel(parent=self)
+        self.webview = QWebEngineView(parent=self)
+        self.index = QWebEnginePage(self)
 
         worklayout = QHBoxLayout(parent=self)
-        worklayout.addWidget(self.displayarea)
+        worklayout.addWidget(self.webview)
         self.setLayout(worklayout)
 
-    @Slot()
-    def draw_graph(self):
-        logger.debug(locals())
-        if self.graph:
+    @staticmethod
+    def to_qpixmap(graph: networkx.MultiDiGraph) -> QPixmap:
+        if graph:
             image = io.BytesIO()
 
             fig, ax = matplotlib.pyplot.subplots()
-            networkx.draw(self.graph, ax=ax)
+            networkx.draw(graph, ax=ax)
             fig.savefig(image, format="png")
             matplotlib.pyplot.close(fig)
 
             pixel_map = QPixmap()
             pixel_map.loadFromData(QByteArray(image.getvalue()))
-            self.displayarea.resize(pixel_map.width(), pixel_map.height())
-            self.displayarea.setPixmap(pixel_map)
-            self.update()
-            logger.debug(f"{pixel_map.width()}x{pixel_map.height()}")
+            return pixel_map
+
+    def draw_index(self):
+        if not self.graph:
+            logger.warning("No graph to draw found!")
+        html = importlib.resources.read_text(__package__, "index.thtml", encoding="utf-8-sig")
+        html = (
+            html.replace(
+                "$graph",
+                "'" + json.dumps(networkx.node_link_data(self.graph)) + "'"
+                if self.graph
+                else """'{"directed":true,"multigraph":true,"graph":[],"nodes":[],"links":[]}'""",
+            )
+            .replace("$width", "640")
+            .replace("$height", "320")
+        )
+        logger.info(f"""Saving html to {pathlib.Path("index.html").absolute()}""")
+        pathlib.Path("index.html").write_text(html)
+
+        self.index.setHtml(html)
+        self.webview.setPage(self.index)
+        self.webview.resize(640, 320)
+        self.webview.show()
+        self.update()
+
+    @Slot()
+    def draw_graph(self):
+        logger.debug(locals())
+        self.draw_index()
 
     @Slot()
     def get_file_types(self):
         logger.debug(locals())
-        return "Node Link Graph (*.json);;Adjacency Graph (*.json)"
+        return ";;".join(["Node Link Graph (*.json)", "Adjacency Graph (*.json)",])
 
     @Slot(str, str)
     def open_file(self, path: str, file_type: str):
@@ -59,6 +86,8 @@ class Graph(QWidget):
                 self.graph = networkx.adjacency_graph(json.loads(pathlib.Path(path).read_text()))
             else:
                 raise NotImplementedError()
+        else:
+            raise NotImplementedError()
 
     @Slot(str, str)
     def save_file(self, path: str, file_type: str):
