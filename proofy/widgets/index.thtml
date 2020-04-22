@@ -5,29 +5,27 @@
     <style>
 
         .links line {
-            stroke: #fff;
+            stroke: black;
             stroke-opacity: 0.5;
-            stroke-width: 1px;
         }
 
         .nodes circle {
-            stroke: #fff;
+            stroke: black;
             stroke-width: 1px;
         }
-
     </style>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <title>Proofy</title>
+</head>
+<body>
+    <svg width="$width" height="$height"></svg>
     <script>
-        var width = $width;
-        var height = $height;
         var graph = JSON.parse($graph);
 
         var svg = d3
-            .select("#graph")
-            .attr("width", width)
-            .attr("height", height)
-
-        var container = svg.append("g");
+            .select("svg"),
+            width = +svg.attr("width"),
+            height = +svg.attr("height");
 
         var simulation = d3
             .forceSimulation(graph.nodes)
@@ -36,15 +34,21 @@
             .force("link", d3.forceLink().id(function (d) { return d.id; }))
             .on("tick", ticked);
 
-        var link = container
+        simulation.force("link").links(graph.links)
+
+
+        var link = svg
             .append("g")
             .attr("class", "links")
             .selectAll("line")
             .data(graph.links)
             .enter()
             .append("line")
+            .attr("stroke-width", "1px")
 
-        var node = container.append("g").attr("class", "nodes")
+        var node = svg
+            .append("g")
+            .attr("class", "nodes")
             .selectAll("g")
             .data(graph.nodes)
             .enter()
@@ -52,14 +56,24 @@
 
         var circles = node
             .append("circle")
-            .attr("r", 5)
-            .attr("fill", "#aaa")
+            .attr("r", 10)
+            .attr("fill", "blue")
             .call(
                 d3.drag()
                     .on("start", dragstarted)
                     .on("drag", dragged)
                     .on("end", dragended)
             );
+
+        var labels = node
+            .append("text")
+            .text(function (d) {
+                return d.id;
+            })
+            .attr('x', 0)
+            .attr('y', 0);
+
+        node.append("title").text(function (d) { return d.id; });
 
         function ticked() {
             node.call(updateNode);
@@ -96,12 +110,5 @@
             d.fy = null;
         }
     </script>
-    <title>Proofy</title>
-</head>
-<body>
-    <div>Proofy</div>
-    <div>
-        <svg id="#graph"></svg>
-    </div>
 </body>
 </html>

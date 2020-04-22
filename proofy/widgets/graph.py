@@ -6,7 +6,7 @@ import pathlib
 
 import matplotlib.pyplot
 import networkx
-from PySide2.QtCore import Slot, QByteArray
+from PySide2.QtCore import Slot, QByteArray, QSize
 from PySide2.QtGui import QPixmap
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PySide2.QtWidgets import QWidget, QHBoxLayout
@@ -62,7 +62,8 @@ class Graph(QWidget):
 
         self.index.setHtml(html)
         self.webview.setPage(self.index)
-        self.webview.resize(640, 320)
+        size = self.index.contentsSize()
+        self.webview.resize(max(640,int(size.width())), max(320,int(size.height())))
         self.webview.show()
         self.update()
 
