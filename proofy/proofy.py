@@ -5,8 +5,6 @@ from PySide2.QtCore import QThread
 from main_window import MainWindow
 
 if __name__ == "__main__":
-    QThread.currentThread().setObjectName("MainThread")
-
     app = QApplication(sys.argv)
 
     window = MainWindow(app)

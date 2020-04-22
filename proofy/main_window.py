@@ -10,21 +10,24 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class LogSignaller(QObject):
+class LogHandlerSignals(QObject):
     log = Signal(str, logging.LogRecord)
 
 
 class LogHandler(logging.Handler):
-    def __init__(self, slot_function, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(LogHandler, self).__init__(*args, **kwargs)
-        self.log_signaller = LogSignaller()
-        self.log_signaller.log.connect(slot_function)
+        self.signals = LogHandlerSignals()
+
+    def add_slots(self, *slots):
+        for slot in slots:
+            self.signals.log.connect(slot)
 
     def emit(self, record):
-        self.log_signaller.log.emit(self.format(record), record)
+        self.signals.log.emit(self.format(record), record)
 
 
-class MainWindow(QMainWindow):
+class LogConsole(QtWidgets.QTextEdit):
     COLORS = {
         logging.DEBUG: "black",
         logging.INFO: "blue",
@@ -33,26 +36,77 @@ class MainWindow(QMainWindow):
         logging.CRITICAL: "purple",
     }
 
+    def __init__(self, *args, **kwargs):
+        super(LogConsole, self).__init__(*args, **kwargs)
+        font = QtGui.QFont("Consolas")
+        font.setStyleHint(font.Monospace)
+        self.setFont(font)
+        self.setReadOnly(True)
+        self.handler = LogHandler()
+        self.handler.add_slots(self.emit)
+        self.handler.setFormatter(
+            logging.Formatter(
+                '<table align="left" cellspacing="7">'
+                '<tr>'
+                '<th align="left">levelname</th>'
+                '<th align="left">message</th>'
+                '<th align="left">funcName</th>'
+                '<th align="left">name</th>'
+                '<th align="left">threadName</th>'
+                '<th align="left">processName</th>'
+                '<th align="left">pathname</th>'
+                '<th align="left">lineno</th>'
+                '<th align="left">asctime</th>'
+                '<th align="left">relativeCreated</th>'
+                '</tr>'
+                '<tr>'
+                '<td align="left">%(levelname)s</td>'
+                '<td align="left">%(message)s</td>'
+                '<td align="left">%(funcName)s</td>'
+                '<td align="left">%(name)s</td>'
+                '<td align="left">%(threadName)s</td>'
+                '<td align="left">%(processName)s</td>'
+                '<td align="left">%(pathname)s</td>'
+                '<td align="left">%(lineno)s</td>'
+                '<td align="left">%(asctime)s</td>'
+                '<td align="left">%(relativeCreated)07dms</td>'
+                '</tr>'
+                '</table>'
+            )
+        )
+        self.handler.setLevel(logging.DEBUG)
+
+    def add_slots(self, *slots):
+        self.handler.add_slots(*slots)
+
+    def add_loggers(self, *loggers):
+        for log in loggers:
+            log.addHandler(self.handler)
+
+    @Slot(str, logging.LogRecord)
+    def emit(self, status, record):
+        color = self.COLORS.get(record.levelno, "black")
+        s = f'<font color="{color}">{status}</font>'
+        self.insertHtml(s)
+        self.ensureCursorVisible()
+
+
+class MainWindow(QMainWindow):
     def __init__(self, app):
         super().__init__()
         self.app = app
 
         # LOGGING
-        self.log_console = self.get_console()
-        self.log_handler = LogHandler(self.log_message)
-        self.log_handler.setFormatter(
-            logging.Formatter(
-                "[%(levelname)s][%(name)s][%(asctime)s][%(relativeCreated)07dms][%(processName)s:%(threadName)s][%(pathname)s:%(lineno)s][%(funcName)s]\n%(message)s"
-            )
-        )
-        self.log_handler.setLevel(logging.DEBUG)
+        self.log_console = LogConsole()
+        self.log_console.add_slots(self.show_log_as_status)
+        self.log_console.add_loggers(logger)
+
         self.console_dock = QDockWidget("Console")
         self.console_dock.setWidget(self.log_console)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.console_dock)
-        logger.addHandler(self.log_handler)
 
         # Widget
-        self.widget = GraphWidget(self.log_handler)
+        self.widget = GraphWidget(self.log_console)
         self.setCentralWidget(self.widget)
 
         # Exit QAction
@@ -77,24 +131,14 @@ class MainWindow(QMainWindow):
         self.status = self.statusBar()
         self.status.showMessage("Welcome to Proofy!")
 
-    def get_console(self):
-        log_console = QtWidgets.QPlainTextEdit(self)
-        font = QtGui.QFont("Consolas")
-        font.setStyleHint(font.Monospace)
-        log_console.setFont(font)
-        log_console.setReadOnly(True)
-        return log_console
-
-    @Slot(str, logging.LogRecord)
-    def log_message(self, status, record):
-        color = self.COLORS.get(record.levelno, "black")
-        s = f'<pre><font color="{color}">{status}</font></pre>'
-        self.log_console.appendHtml(s)
-        self.status.showMessage(f"{status}")
-        self.update()
+    @Slot()
+    def exit(self):
+        logger.debug(locals())
+        QApplication.quit()
 
     @Slot()
     def open(self):
+        logger.debug(locals())
         path = QFileDialog.getOpenFileName(self, caption="Open Graph", filter=self.widget.get_file_types())
         if path:
             try:
@@ -104,6 +148,7 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def save_as(self):
+        logger.debug(locals())
         path = QFileDialog.getSaveFileName(self, caption="Save Graph", filter=self.widget.get_file_types())
         if path:
             try:
@@ -111,6 +156,9 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 logger.error(e)
 
-    @Slot()
-    def exit(self):
-        QApplication.quit()
+    @Slot(str, logging.LogRecord)
+    def show_log_as_status(self, status, record):
+        levels = {0: "NOTSET", 10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}
+
+        self.status.showMessage(f"Welcome to Proofy! Loglevel: {levels[record.levelno]}")
+        self.update()
