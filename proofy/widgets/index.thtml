@@ -1,114 +1,145 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
     <style>
+      .links line {
+        stroke: black;
+        stroke-opacity: 1;
+        stroke-width: 1px;
+      }
 
-        .links line {
-            stroke: black;
-            stroke-opacity: 0.5;
-        }
+      .nodes circle {
+        stroke: black;
+        stroke-opacity: 1;
+        stroke-width: 1px;
+      }
 
-        .nodes circle {
-            stroke: black;
-            stroke-width: 1px;
-        }
+      .nodes text {
+        font-family: monospace, sans-serif;
+        font-size: 12px;
+        user-select: none;
+      }
     </style>
-    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
     <title>Proofy</title>
-</head>
-<body>
-    <svg width="$width" height="$height"></svg>
+  </head>
+  <body>
     <script>
-        var graph = JSON.parse($graph);
+      function dragstart(d) {
+        d3.event.sourceEvent.stopPropagation();
+        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
 
-        var svg = d3
-            .select("svg"),
-            width = +svg.attr("width"),
-            height = +svg.attr("height");
+      function dragmove(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+      }
 
-        var simulation = d3
-            .forceSimulation(graph.nodes)
-            .force("charge", d3.forceManyBody())
-            .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("link", d3.forceLink().id(function (d) { return d.id; }))
-            .on("tick", ticked);
+      function dragend(d) {
+        if (!d3.event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
 
-        simulation.force("link").links(graph.links)
+      function ticked() {
+        node.call(updateNode);
+        link.call(updateLink);
+      }
 
+      function updateLink(link) {
+        link
+          .attr("x1", function (d) {
+            return d.source.x;
+          })
+          .attr("y1", function (d) {
+            return d.source.y;
+          })
+          .attr("x2", function (d) {
+            return d.target.x;
+          })
+          .attr("y2", function (d) {
+            return d.target.y;
+          });
+      }
 
-        var link = svg
-            .append("g")
-            .attr("class", "links")
-            .selectAll("line")
-            .data(graph.links)
-            .enter()
-            .append("line")
-            .attr("stroke-width", "1px")
+      function updateNode(node) {
+        node.attr("transform", function (d) {
+          return "translate(" + d.x + "," + d.y + ")";
+        });
+      }
 
-        var node = svg
-            .append("g")
-            .attr("class", "nodes")
-            .selectAll("g")
-            .data(graph.nodes)
-            .enter()
-            .append("g")
+      var width = $width;
+      var height = $height;
+      var radius = 50;
+      var graph = JSON.parse($graph);
 
-        var circles = node
-            .append("circle")
-            .attr("r", 10)
-            .attr("fill", "blue")
-            .call(
-                d3.drag()
-                    .on("start", dragstarted)
-                    .on("drag", dragged)
-                    .on("end", dragended)
-            );
+      var svg = d3
+        .select("body")
+        .append("svg:svg")
+        .attr("width", width)
+        .attr("height", height);
 
-        var labels = node
-            .append("text")
-            .text(function (d) {
-                return d.id;
-            })
-            .attr('x', 0)
-            .attr('y', 0);
+      svg
+        .append("defs")
+        .append("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 0 10 10")
+        .attr("refX", radius + 10)
+        .attr("refY", 5)
+        .attr("markerWidth", 10)
+        .attr("markerHeight", 10)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M 0 0 L 10 5 L 0 10 z")
+        .attr("fill", "black");
 
-        node.append("title").text(function (d) { return d.id; });
+      var collisionForce = d3.forceCollide(radius);
+      var simulation = d3
+        .forceSimulation()
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force(
+          "link",
+          d3.forceLink().id(function (d) {
+            return d.id;
+          })
+        )
+        .force("collision", d3.forceCollide());
+      simulation.nodes(graph.nodes).on("tick", ticked);
+      simulation.force("link").links(graph.links);
+      simulation.force("collision").radius(radius);
 
-        function ticked() {
-            node.call(updateNode);
-            link.call(updateLink);
-        }
+      var links = svg
+        .append("g")
+        .attr("class", "links")
+        .selectAll("line")
+        .data(graph.links);
+      var link = links.enter().append("line").attr("marker-end", "url(#arrow)");
 
-        function updateLink(link) {
-            link.attr("x1", function (d) { return d.source.x; })
-                .attr("y1", function (d) { return d.source.y; })
-                .attr("x2", function (d) { return d.target.x; })
-                .attr("y2", function (d) { return d.target.y; });
-        }
+      var nodes = svg
+        .append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
+        .data(graph.nodes);
+      var node = nodes.enter().append("g");
+      node.call(
+        d3.drag().on("start", dragstart).on("drag", dragmove).on("end", dragend)
+      );
+      node
+        .append("circle")
+        .attr("r", radius)
+        .attr("fill", "white")
+        .attr("fill-opacity", "0.5");
 
-        function updateNode(node) {
-            node.attr("transform", function (d) {
-                return "translate(" + d.x + "," + d.y + ")";
-            });
-        }
-
-        function dragstarted(d) {
-            if (!d3.event.active) graphLayout.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-        }
-
-        function dragged(d) {
-            d.fx = d3.event.x;
-            d.fy = d3.event.y;
-        }
-
-        function dragended(d) {
-            if (!d3.event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-        }
+      node
+        .append("text")
+        .text(function (d) {
+          return d.id;
+        })
+        .attr("text-anchor", "middle");
     </script>
-</body>
+  </body>
 </html>

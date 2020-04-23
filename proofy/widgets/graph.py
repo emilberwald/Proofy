@@ -6,9 +6,10 @@ import pathlib
 
 import matplotlib.pyplot
 import networkx
-from PySide2.QtCore import Slot, QByteArray, QSize
+from PySide2 import QtWebEngine
+from PySide2.QtCore import Slot, QByteArray
 from PySide2.QtGui import QPixmap
-from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
 from PySide2.QtWidgets import QWidget, QHBoxLayout
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,11 @@ class Graph(QWidget):
     def draw_index(self):
         if not self.graph:
             logger.warning("No graph to draw found!")
+        width = self.contentsRect().width()
+        height = self.contentsRect().height()
+        pagewidth = int(width) - 10
+        pageheight = int(height) - 10
+        logger.info(f"{width}x{height}")
         html = importlib.resources.read_text(__package__, "index.thtml", encoding="utf-8-sig")
         html = (
             html.replace(
@@ -54,16 +60,16 @@ class Graph(QWidget):
                 if self.graph
                 else """'{"directed":true,"multigraph":true,"graph":[],"nodes":[],"links":[]}'""",
             )
-            .replace("$width", "640")
-            .replace("$height", "320")
+            .replace("$width", str(pagewidth))
+            .replace("$height", str(pageheight))
         )
         logger.info(f"""Saving html to {pathlib.Path("index.html").absolute()}""")
         pathlib.Path("index.html").write_text(html)
 
         self.index.setHtml(html)
+        self.index.settings().setAttribute(QWebEngineSettings.ShowScrollBars, False)
         self.webview.setPage(self.index)
-        size = self.index.contentsSize()
-        self.webview.resize(max(640,int(size.width())), max(320,int(size.height())))
+        self.webview.resize(width, height)
         self.webview.show()
         self.update()
 
@@ -73,9 +79,22 @@ class Graph(QWidget):
         self.draw_index()
 
     @Slot()
-    def get_file_types(self):
+    def get_open_file_extensions(self):
         logger.debug(locals())
-        return ";;".join(["Node Link Graph (*.json)", "Adjacency Graph (*.json)",])
+        return ";;".join(
+            [
+                "Node Link Graph (*.json)",
+                "Adjacency Graph (*.json)",
+                "GraphML (.graphml)",
+                "LEDA (*.gw, *.lgr, *.leda)",
+                "Pajek (*.net)",
+            ]
+        )
+
+    @Slot()
+    def get_save_file_extensions(self):
+        logger.debug(locals())
+        return ";;".join(["Node Link Graph (*.json)", "Adjacency Graph (*.json)"])
 
     @Slot(str, str)
     def open_file(self, path: str, file_type: str):
@@ -87,6 +106,12 @@ class Graph(QWidget):
                 self.graph = networkx.adjacency_graph(json.loads(pathlib.Path(path).read_text()))
             else:
                 raise NotImplementedError()
+        elif "graphml" in file_type.lower():
+            self.graph = networkx.read_graphml(path)
+        elif "leda" in file_type.lower():
+            self.graph = networkx.read_leda(path)
+        elif "pajek" in file_type.lower():
+            self.graph = networkx.read_pajek(path)
         else:
             raise NotImplementedError()
 

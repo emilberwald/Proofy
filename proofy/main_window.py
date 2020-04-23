@@ -73,7 +73,9 @@ class MainWindow(QMainWindow):
     @Slot()
     def open(self):
         logger.debug(locals())
-        path = QFileDialog.getOpenFileName(self, caption="Open Graph", filter=self.graph_widget.get_file_types())
+        path = QFileDialog.getOpenFileName(
+            self, caption="Open Graph", filter=self.graph_widget.get_open_file_extensions()
+        )
         if path:
             try:
                 self.graph_widget.open_file(*path)
@@ -83,7 +85,9 @@ class MainWindow(QMainWindow):
     @Slot()
     def save_as(self):
         logger.debug(locals())
-        path = QFileDialog.getSaveFileName(self, caption="Save Graph", filter=self.graph_widget.get_file_types())
+        path = QFileDialog.getSaveFileName(
+            self, caption="Save Graph", filter=self.graph_widget.get_save_file_extensions()
+        )
         if path:
             try:
                 self.graph_widget.save_file(*path)
