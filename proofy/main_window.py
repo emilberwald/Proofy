@@ -91,7 +91,7 @@ class MainWindow(QMainWindow):
         self.log_console_widget = LogConsoleWidget()
         self.log_console_widget.add_loggers(logger)
         self.graph_widget = GraphWidget(self.log_console_widget)
-        self.tools_widget = ToolsWidget(slot_draw_graph=self.graph_widget.draw_graph)
+        self.tools_widget = ToolsWidget(graph_widget=self.graph_widget)
 
     def create_menus(self):
         self.file_menu = self.menuBar().addMenu("File")
@@ -173,7 +173,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent):
         logger.debug(locals())
-        if self.save_prompt():
+        if self.unsaved_check():
             self.write_settings()
             event.accept()
         else:
@@ -182,13 +182,13 @@ class MainWindow(QMainWindow):
     @Slot()
     def exit(self):
         logger.debug(locals())
-        if self.save_prompt():
+        if self.unsaved_check():
             QApplication.quit()
 
     @Slot()
     def new(self):
         logger.debug(locals())
-        if self.save_prompt():
+        if self.unsaved_check():
             self.current_file = None
 
     def set_file_status(self, *, modified: bool):
@@ -203,7 +203,7 @@ class MainWindow(QMainWindow):
     @Slot()
     def open(self):
         logger.debug(locals())
-        if self.save_prompt():
+        if self.unsaved_check():
             if (
                 path := QFileDialog.getOpenFileName(
                     self, caption=self.tr("Open File"), filter=self.graph_widget.get_open_file_extensions(),
@@ -255,29 +255,28 @@ class MainWindow(QMainWindow):
         finally:
             QApplication.restoreOverrideCursor()
 
-    def save_prompt(self):
+    def unsaved_check(self):
         logger.debug(locals())
         if self.current_file:
-            ret = QMessageBox.warning(
-                self,
-                self.tr("Application"),
-                self.tr(
-                    """
-                    Do you want to save your current work?
-                    """
-                ),
-                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-            )
-            logger.debug(ret)
-            if ret == QMessageBox.Save:
-                self.save()
-                return True
-            elif ret == QMessageBox.Discard:
-                return True
-            elif ret == QMessageBox.Cancel:
-                return False
-            else:
-                raise NotImplementedError()
+            if any([self.isWindowModified(), self.graph_widget.isWindowModified()]):
+                ret = QMessageBox.warning(
+                    self,
+                    self.tr("Application"),
+                    self.tr(
+                        f"Do you want to save your current work on [{self.current_file if self.current_file else '*'}]?"
+                    ),
+                    QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                )
+                logger.debug(ret)
+                if ret == QMessageBox.Save:
+                    self.save()
+                    return True
+                elif ret == QMessageBox.Discard:
+                    return True
+                elif ret == QMessageBox.Cancel:
+                    return False
+                else:
+                    raise NotImplementedError()
         else:
             return True
 
