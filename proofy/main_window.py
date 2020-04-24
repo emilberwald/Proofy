@@ -151,7 +151,7 @@ class MainWindow(QMainWindow):
                 f"""
                 <h1>Proofy {__version__}</h1>
                 <p>
-                <b>Proofy<b> is a formal proof system GUI.
+                <b>Proofy is a formal proof system GUI.</b>
                 </p>
                 <p>
                 Oh, it looks like Proofy wants to talk!
