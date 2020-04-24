@@ -1,9 +1,19 @@
 import logging
+import pathlib
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import Slot, Qt, QSettings, QByteArray
 from PySide2.QtGui import QKeySequence, QCloseEvent
-from PySide2.QtWidgets import QMainWindow, QApplication, QAction, QFileDialog, QDockWidget, QMessageBox, QToolBar, QMenu
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QApplication,
+    QAction,
+    QFileDialog,
+    QDockWidget,
+    QMessageBox,
+    QToolBar,
+    QMenu,
+)
 
 from __init__ import __version__
 from widgets.graphwidget import GraphWidget
@@ -72,7 +82,13 @@ class MainWindow(QMainWindow):
         self.toolbar = QToolBar(self.tr("Tools"), self)
         self.toolbar.setStatusTip(self.tr("Tools"))
         self.toolbar.addActions(
-            [self.new_action, self.open_action, self.save_action, self.save_as_action, self.exit_action]
+            [
+                self.new_action,
+                self.open_action,
+                self.save_action,
+                self.save_as_action,
+                self.exit_action,
+            ]
         )
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.about_action)
@@ -87,7 +103,13 @@ class MainWindow(QMainWindow):
         self.file_menu = self.menuBar().addMenu("File")
         self.file_menu.setStatusTip(self.tr("File operations"))
         self.file_menu.addActions(
-            [self.new_action, self.open_action, self.save_action, self.save_as_action, self.exit_action]
+            [
+                self.new_action,
+                self.open_action,
+                self.save_action,
+                self.save_as_action,
+                self.exit_action,
+            ]
         )
 
         self.view_menu = self.menuBar().addMenu("View")
@@ -102,31 +124,53 @@ class MainWindow(QMainWindow):
 
     def create_actions(self, app):
 
-        self.about_action = QAction(app.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxInformation), "About", self)
+        self.about_action = QAction(
+            app.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxInformation),
+            "About",
+            self,
+        )
         self.about_action.setStatusTip("Show information about Proofy")
         self.about_action.triggered.connect(self.about)
 
-        self.new_action = QAction(app.style().standardIcon(QtWidgets.QStyle.SP_FileDialogNewFolder), "New...", self)
+        self.new_action = QAction(
+            app.style().standardIcon(QtWidgets.QStyle.SP_FileIcon), "New...", self
+        )
         self.new_action.setStatusTip(self.tr("Create a new file"))
         self.new_action.setShortcuts(QKeySequence.New)
         self.new_action.triggered.connect(self.new)
 
-        self.open_action = QAction(app.style().standardIcon(QtWidgets.QStyle.SP_DialogOpenButton), "Open...", self)
+        self.open_action = QAction(
+            app.style().standardIcon(QtWidgets.QStyle.SP_DialogOpenButton),
+            "Open...",
+            self,
+        )
         self.open_action.setStatusTip(self.tr("Open file"))
         self.open_action.setShortcuts(QKeySequence.Open)
         self.open_action.triggered.connect(self.open)
 
-        self.save_action = QAction(app.style().standardIcon(QtWidgets.QStyle.SP_DialogSaveButton), "Save...", self)
+        self.save_action = QAction(
+            app.style().standardIcon(QtWidgets.QStyle.SP_DialogSaveButton),
+            "Save...",
+            self,
+        )
         self.save_action.setStatusTip(self.tr("Save file"))
         self.save_action.setShortcuts(QKeySequence.Save)
         self.save_action.triggered.connect(self.save)
 
-        self.save_as_action = QAction(app.style().standardIcon(QtWidgets.QStyle.SP_DriveFDIcon), "Save As...", self)
+        self.save_as_action = QAction(
+            app.style().standardIcon(QtWidgets.QStyle.SP_DriveFDIcon),
+            "Save As...",
+            self,
+        )
         self.save_as_action.setStatusTip(self.tr("Save to file"))
         self.save_as_action.setShortcuts(QKeySequence.SaveAs)
         self.save_as_action.triggered.connect(self.save_as)
 
-        self.exit_action = QAction(app.style().standardIcon(QtWidgets.QStyle.SP_DialogCloseButton), "Exit", self)
+        self.exit_action = QAction(
+            app.style().standardIcon(QtWidgets.QStyle.SP_DialogCloseButton),
+            "Exit",
+            self,
+        )
         self.exit_action.setStatusTip(self.tr("Exit Proofy"))
         self.exit_action.setShortcuts(QKeySequence.Quit)
         self.exit_action.triggered.connect(self.exit)
@@ -139,7 +183,9 @@ class MainWindow(QMainWindow):
 
         self.toggle_tools_dock = QAction("Toggle Tools Dock", self)
         self.toggle_tools_dock.setStatusTip("Toggle visibility of the tools dock")
-        self.toggle_tools_dock.triggered.connect(lambda _: self.tools_dock.setVisible(not self.tools_dock.isVisible()))
+        self.toggle_tools_dock.triggered.connect(
+            lambda _: self.tools_dock.setVisible(not self.tools_dock.isVisible())
+        )
 
     @Slot()
     def about(self):
@@ -181,19 +227,32 @@ class MainWindow(QMainWindow):
         if self.save_prompt():
             self.current_file = None
 
+    def set_file_status(self, *, modified: bool):
+        if self.current_file:
+            file = pathlib.Path(self.current_file[0])
+            self.setWindowTitle(f"{file.name}[*] [{file}] - Proofy")
+            self.setWindowModified(modified)
+        else:
+            self.setWindowTitle(f"Proofy[*]")
+            self.setWindowModified(modified)
+
     @Slot()
     def open(self):
         logger.debug(locals())
         if self.save_prompt():
             if (
                 path := QFileDialog.getOpenFileName(
-                    self, caption=self.tr("Open File"), filter=self.graph_widget.get_open_file_extensions()
+                    self,
+                    caption=self.tr("Open File"),
+                    filter=self.graph_widget.get_open_file_extensions(),
                 )
             ) :
                 try:
                     QApplication.setOverrideCursor(Qt.WaitCursor)
                     self.graph_widget.open_file(*path)
                     self.statusBar().showMessage(f"Opened {path} successfully")
+                    self.current_file = path
+                    self.set_file_status(modified=False)
                 except Exception as e:
                     logger.error(e)
                 finally:
@@ -218,7 +277,9 @@ class MainWindow(QMainWindow):
         logger.debug(locals())
         if (
             path := QFileDialog.getSaveFileName(
-                self, caption=self.tr("Save File"), filter=self.graph_widget.get_save_file_extensions()
+                self,
+                caption=self.tr("Save File"),
+                filter=self.graph_widget.get_save_file_extensions(),
             )
         ) :
             self.current_file = path
@@ -264,4 +325,6 @@ class MainWindow(QMainWindow):
         logger.debug(locals())
         settings = QSettings("EAB", "Proofy")
         settings.setValue("presentation/geometry", self.saveGeometry())
-        settings.setValue("presentation/state", self.saveState(int(__version__.replace(".", ""))))
+        settings.setValue(
+            "presentation/state", self.saveState(int(__version__.replace(".", "")))
+        )

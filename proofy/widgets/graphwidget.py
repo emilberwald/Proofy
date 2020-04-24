@@ -5,7 +5,11 @@ import pathlib
 
 import networkx
 from PySide2.QtCore import Slot, QStandardPaths
-from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
+from PySide2.QtWebEngineWidgets import (
+    QWebEngineView,
+    QWebEnginePage,
+    QWebEngineSettings,
+)
 from PySide2.QtWidgets import QWidget, QHBoxLayout
 
 logger = logging.getLogger(__name__)
@@ -34,7 +38,9 @@ class GraphWidget(QWidget):
         pagewidth = int(width) - 10
         pageheight = int(height) - 10
         logger.info(f"{width}x{height}")
-        html = importlib.resources.read_text(__package__, "index.thtml", encoding="utf-8-sig")
+        html = importlib.resources.read_text(
+            __package__, "index.thtml", encoding="utf-8-sig"
+        )
         html = (
             html.replace(
                 "$graph",
@@ -45,7 +51,12 @@ class GraphWidget(QWidget):
             .replace("$width", str(pagewidth))
             .replace("$height", str(pageheight))
         )
-        path = pathlib.Path(QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)) / "index.html"
+        path = (
+            pathlib.Path(
+                QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)
+            )
+            / "index.html"
+        )
         logger.info(f"""Saving html to {path.absolute()}""")
         path.write_text(html)
 
@@ -84,9 +95,13 @@ class GraphWidget(QWidget):
         logger.debug(locals())
         if "json" in file_type.lower():
             if "node link graph" in file_type.lower():
-                self.graph = networkx.node_link_graph(json.loads(pathlib.Path(path).read_text()))
+                self.graph = networkx.node_link_graph(
+                    json.loads(pathlib.Path(path).read_text())
+                )
             elif "adjacency graph" in file_type.lower():
-                self.graph = networkx.adjacency_graph(json.loads(pathlib.Path(path).read_text()))
+                self.graph = networkx.adjacency_graph(
+                    json.loads(pathlib.Path(path).read_text())
+                )
             else:
                 raise NotImplementedError()
         elif "graphml" in file_type.lower():
