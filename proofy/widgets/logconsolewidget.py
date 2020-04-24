@@ -3,10 +3,10 @@ import logging
 from PySide2 import QtGui, QtWidgets
 from PySide2.QtCore import Slot
 
-from widgets.log_handler import LogHandler
+from widgets.loghandler import LogHandler
 
 
-class LogConsole(QtWidgets.QTextEdit):
+class LogConsoleWidget(QtWidgets.QTextEdit):
     COLORS = {
         logging.DEBUG: "black",
         logging.INFO: "blue",
@@ -16,7 +16,7 @@ class LogConsole(QtWidgets.QTextEdit):
     }
 
     def __init__(self, *args, **kwargs):
-        super(LogConsole, self).__init__(*args, **kwargs)
+        super(LogConsoleWidget, self).__init__(*args, **kwargs)
         font = QtGui.QFont("Consolas")
         font.setStyleHint(font.Monospace)
         self.setFont(font)

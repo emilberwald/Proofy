@@ -1,6 +1,6 @@
 import logging
 
-from widgets.log_signals import LogSignals
+from widgets.logsignals import LogSignals
 
 
 class LogHandler(logging.Handler):

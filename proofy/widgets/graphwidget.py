@@ -1,14 +1,10 @@
 import importlib.resources
-import io
 import json
 import logging
 import pathlib
 
-import matplotlib.pyplot
 import networkx
-from PySide2 import QtWebEngine
-from PySide2.QtCore import Slot, QByteArray
-from PySide2.QtGui import QPixmap
+from PySide2.QtCore import Slot, QStandardPaths
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
 from PySide2.QtWidgets import QWidget, QHBoxLayout
 
@@ -16,7 +12,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class Graph(QWidget):
+class GraphWidget(QWidget):
     def __init__(self, log_console):
         logger.debug(locals())
         QWidget.__init__(self)
@@ -29,20 +25,6 @@ class Graph(QWidget):
         worklayout = QHBoxLayout(parent=self)
         worklayout.addWidget(self.webview)
         self.setLayout(worklayout)
-
-    @staticmethod
-    def to_qpixmap(graph: networkx.MultiDiGraph) -> QPixmap:
-        if graph:
-            image = io.BytesIO()
-
-            fig, ax = matplotlib.pyplot.subplots()
-            networkx.draw(graph, ax=ax)
-            fig.savefig(image, format="png")
-            matplotlib.pyplot.close(fig)
-
-            pixel_map = QPixmap()
-            pixel_map.loadFromData(QByteArray(image.getvalue()))
-            return pixel_map
 
     def draw_index(self):
         if not self.graph:
@@ -63,8 +45,9 @@ class Graph(QWidget):
             .replace("$width", str(pagewidth))
             .replace("$height", str(pageheight))
         )
-        logger.info(f"""Saving html to {pathlib.Path("index.html").absolute()}""")
-        pathlib.Path("index.html").write_text(html)
+        path = pathlib.Path(QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)) / "index.html"
+        logger.info(f"""Saving html to {path.absolute()}""")
+        path.write_text(html)
 
         self.index.setHtml(html)
         self.index.settings().setAttribute(QWebEngineSettings.ShowScrollBars, False)

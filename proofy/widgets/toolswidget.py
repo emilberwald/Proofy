@@ -1,9 +1,9 @@
 from PySide2.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout
 
 
-class Tools(QWidget):
+class ToolsWidget(QWidget):
     def __init__(self, *args, slot_draw_graph, **kwargs):
-        super(Tools, self).__init__(*args, **kwargs)
+        super(ToolsWidget, self).__init__(*args, **kwargs)
         self.add_axiom = QComboBox(parent=self)
 
         self.draw_graph = QPushButton(text="Draw Graph", parent=self)
